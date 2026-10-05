@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, or_
 from sqlalchemy.orm import sessionmaker, Session
@@ -41,6 +42,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Authentication sederhana untuk latihan
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != "belajar-api-123":
+        raise HTTPException(status_code=401, detail="Token tidak valid")
+    return credentials
+
 # Dependency untuk mendapatkan koneksi database
 def get_db():
     db = SessionLocal()
@@ -67,7 +76,7 @@ def startup_event():
 # 5. REST API Endpoints
 
 # GET /api/suppliers/
-@app.get("/api/suppliers/", response_model=list[SupplierResponse])
+@app.get("/api/suppliers/", response_model=list[SupplierResponse], dependencies=[Depends(verify_token)])
 def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
     query = db.query(SupplierDB)
 
@@ -84,7 +93,7 @@ def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
     return query.all()
 
 # GET /api/suppliers/{id}
-@app.get("/api/suppliers/{supplier_id}", response_model=SupplierResponse)
+@app.get("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(verify_token)])
 def get_supplier_by_id(supplier_id: int, db: Session = Depends(get_db)):
     supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if supplier is None:
@@ -92,7 +101,7 @@ def get_supplier_by_id(supplier_id: int, db: Session = Depends(get_db)):
     return supplier
 
 # POST /api/suppliers/
-@app.post("/api/suppliers/", response_model=SupplierResponse, status_code=201)
+@app.post("/api/suppliers/", response_model=SupplierResponse, status_code=201, dependencies=[Depends(verify_token)])
 def create_supplier(supplier: SupplierCreate, db: Session = Depends(get_db)):
     # Gunakan model_dump jika Pydantic v2, atau dict untuk v1. Kita gunakan model_dump dengan fallback dict.
     supplier_data = supplier.model_dump() if hasattr(supplier, "model_dump") else supplier.dict()
@@ -103,7 +112,7 @@ def create_supplier(supplier: SupplierCreate, db: Session = Depends(get_db)):
     return db_supplier
 
 # PUT /api/suppliers/{id}
-@app.put("/api/suppliers/{supplier_id}", response_model=SupplierResponse)
+@app.put("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(verify_token)])
 def update_supplier(supplier_id: int, supplier_update: SupplierCreate, db: Session = Depends(get_db)):
     db_supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if db_supplier is None:
@@ -118,7 +127,7 @@ def update_supplier(supplier_id: int, supplier_update: SupplierCreate, db: Sessi
     return db_supplier
 
 # DELETE /api/suppliers/{id}
-@app.delete("/api/suppliers/{supplier_id}")
+@app.delete("/api/suppliers/{supplier_id}", dependencies=[Depends(verify_token)])
 def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
     db_supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if db_supplier is None:
