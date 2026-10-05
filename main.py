@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, or_
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm import declarative_base
 
@@ -68,8 +68,20 @@ def startup_event():
 
 # GET /api/suppliers/
 @app.get("/api/suppliers/", response_model=list[SupplierResponse])
-def get_all_suppliers(db: Session = Depends(get_db)):
-    return db.query(SupplierDB).all()
+def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
+    query = db.query(SupplierDB)
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                SupplierDB.kode_supplier.ilike(search_pattern),
+                SupplierDB.nama_supplier.ilike(search_pattern),
+                SupplierDB.alamat.ilike(search_pattern)
+            )
+        )
+
+    return query.all()
 
 # GET /api/suppliers/{id}
 @app.get("/api/suppliers/{supplier_id}", response_model=SupplierResponse)
