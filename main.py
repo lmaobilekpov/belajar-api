@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, or_
 from sqlalchemy.orm import sessionmaker, Session
@@ -43,12 +43,40 @@ app = FastAPI(
 )
 
 # Authentication sederhana untuk latihan
-security = HTTPBearer()
+fake_users_db = {
+    "jen": {
+        "username": "jen",
+        "password": "belajar123"
+    }
+}
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if credentials.credentials != "belajar-api-123":
-        raise HTTPException(status_code=401, detail="Token tidak valid")
-    return credentials
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_users_db.get(token)
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Token tidak valid",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    return user
+
+@app.post("/token")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = fake_users_db.get(form_data.username)
+
+    if user is None or user["password"] != form_data.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Username atau password salah",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    return {
+        "access_token": user["username"],
+        "token_type": "bearer"
+    }
 
 # Dependency untuk mendapatkan koneksi database
 def get_db():
@@ -76,7 +104,7 @@ def startup_event():
 # 5. REST API Endpoints
 
 # GET /api/suppliers/
-@app.get("/api/suppliers/", response_model=list[SupplierResponse], dependencies=[Depends(verify_token)])
+@app.get("/api/suppliers/", response_model=list[SupplierResponse], dependencies=[Depends(get_current_user)])
 def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
     query = db.query(SupplierDB)
 
