@@ -141,6 +141,7 @@ def get_supplier_by_id(supplier_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Supplier tidak ditemukan")
     return supplier
 
+
 @app.post("/api/suppliers/", response_model=SupplierResponse, status_code=201, dependencies=[Depends(get_current_user)])
 def create_supplier(supplier: SupplierCreate, db: Session = Depends(get_db)):
     supplier_data = supplier.model_dump() if hasattr(supplier, "model_dump") else supplier.dict()
