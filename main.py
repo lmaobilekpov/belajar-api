@@ -1,26 +1,26 @@
+from datetime import datetime, timedelta, timezone
+
+import jwt
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from pwdlib import PasswordHash
 from sqlalchemy import create_engine, Column, Integer, String, or_
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm import declarative_base
 
-# 1. Setup Database SQLite
 SQLALCHEMY_DATABASE_URL = "sqlite:///./suppliers.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 2. Database Model (SQLAlchemy)
 class SupplierDB(Base):
     __tablename__ = "suppliers"
-    
     id = Column(Integer, primary_key=True, index=True)
     kode_supplier = Column(String, unique=True, index=True)
     nama_supplier = Column(String)
     alamat = Column(String)
 
-# 3. Pydantic Models untuk Request dan Response
 class SupplierBase(BaseModel):
     kode_supplier: str
     nama_supplier: str
@@ -31,54 +31,74 @@ class SupplierCreate(SupplierBase):
 
 class SupplierResponse(SupplierBase):
     id: int
-
     class Config:
         from_attributes = True
 
-# 4. Inisialisasi FastAPI
 app = FastAPI(
     title="Supplier API Playground",
     description="Aplikasi server API sederhana untuk belajar konsep REST API",
     version="1.0.0"
 )
 
-# Authentication sederhana untuk latihan
 fake_users_db = {
     "jen": {
         "username": "jen",
-        "password": "belajar123"
+        "hashed_password": PasswordHash.recommended().hash("belajar123")
     }
 }
 
+SECRET_KEY = "belajar-api-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+def authenticate_user(username: str, password: str):
+    user = fake_users_db.get(username)
+    if user is None or not password_hash.verify(password, user["hashed_password"]):
+        return None
+    return user
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = fake_users_db.get(token)
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Token tidak valid atau sudah kedaluwarsa",
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except jwt.InvalidTokenError:
+        raise credentials_exception
+    user = fake_users_db.get(username)
     if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Token tidak valid",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+        raise credentials_exception
     return user
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = fake_users_db.get(form_data.username)
-
-    if user is None or user["password"] != form_data.password:
+    user = authenticate_user(form_data.username, form_data.password)
+    if user is None:
         raise HTTPException(
             status_code=401,
             detail="Username atau password salah",
             headers={"WWW-Authenticate": "Bearer"}
         )
+    access_token = create_access_token(
+        data={"sub": user["username"]},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-    return {
-        "access_token": user["username"],
-        "token_type": "bearer"
-    }
-
-# Dependency untuk mendapatkan koneksi database
 def get_db():
     db = SessionLocal()
     try:
@@ -86,7 +106,6 @@ def get_db():
     finally:
         db.close()
 
-# Event startup: buat tabel dan isi seed data jika kosong
 @app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
@@ -101,13 +120,9 @@ def startup_event():
         db.commit()
     db.close()
 
-# 5. REST API Endpoints
-
-# GET /api/suppliers/
 @app.get("/api/suppliers/", response_model=list[SupplierResponse], dependencies=[Depends(get_current_user)])
 def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
     query = db.query(SupplierDB)
-
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -117,21 +132,17 @@ def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
                 SupplierDB.alamat.ilike(search_pattern)
             )
         )
-
     return query.all()
 
-# GET /api/suppliers/{id}
-@app.get("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(verify_token)])
+@app.get("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(get_current_user)])
 def get_supplier_by_id(supplier_id: int, db: Session = Depends(get_db)):
     supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier tidak ditemukan")
     return supplier
 
-# POST /api/suppliers/
-@app.post("/api/suppliers/", response_model=SupplierResponse, status_code=201, dependencies=[Depends(verify_token)])
+@app.post("/api/suppliers/", response_model=SupplierResponse, status_code=201, dependencies=[Depends(get_current_user)])
 def create_supplier(supplier: SupplierCreate, db: Session = Depends(get_db)):
-    # Gunakan model_dump jika Pydantic v2, atau dict untuk v1. Kita gunakan model_dump dengan fallback dict.
     supplier_data = supplier.model_dump() if hasattr(supplier, "model_dump") else supplier.dict()
     db_supplier = SupplierDB(**supplier_data)
     db.add(db_supplier)
@@ -139,28 +150,23 @@ def create_supplier(supplier: SupplierCreate, db: Session = Depends(get_db)):
     db.refresh(db_supplier)
     return db_supplier
 
-# PUT /api/suppliers/{id}
-@app.put("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(verify_token)])
+@app.put("/api/suppliers/{supplier_id}", response_model=SupplierResponse, dependencies=[Depends(get_current_user)])
 def update_supplier(supplier_id: int, supplier_update: SupplierCreate, db: Session = Depends(get_db)):
     db_supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if db_supplier is None:
         raise HTTPException(status_code=404, detail="Supplier tidak ditemukan")
-    
     update_data = supplier_update.model_dump() if hasattr(supplier_update, "model_dump") else supplier_update.dict()
     for key, value in update_data.items():
         setattr(db_supplier, key, value)
-    
     db.commit()
     db.refresh(db_supplier)
     return db_supplier
 
-# DELETE /api/suppliers/{id}
-@app.delete("/api/suppliers/{supplier_id}", dependencies=[Depends(verify_token)])
+@app.delete("/api/suppliers/{supplier_id}", dependencies=[Depends(get_current_user)])
 def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
     db_supplier = db.query(SupplierDB).filter(SupplierDB.id == supplier_id).first()
     if db_supplier is None:
         raise HTTPException(status_code=404, detail="Supplier tidak ditemukan")
-    
     db.delete(db_supplier)
     db.commit()
     return {"message": f"Supplier dengan id {supplier_id} berhasil dihapus"}
