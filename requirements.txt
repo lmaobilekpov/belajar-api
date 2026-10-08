@@ -4,3 +4,4 @@ sqlalchemy
 python-multipart
 pyjwt
 pwdlib[argon2]
+httpx
