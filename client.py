@@ -52,3 +52,19 @@ search_response = httpx.get(
 print("Search status:", search_response.status_code)
 print("Search results:")
 print(search_response.json())
+
+new_supplier_data = {
+    "kode_supplier": "SUP005",
+    "nama_supplier": "PT Contoh",
+    "alamat": "Depok"
+}
+
+new_supplier_response = httpx.post(
+    f"{BASE_URL}/api/suppliers/",
+    json=new_supplier_data,
+    headers=headers
+)
+
+print("Create supplier status:", new_supplier_response.status_code)
+print("Created supplier:")
+print(new_supplier_response.json())
