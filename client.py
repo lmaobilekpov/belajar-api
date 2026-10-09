@@ -42,3 +42,13 @@ supplier_detail_response = httpx.get(
 print("Supplier detail status:", supplier_detail_response.status_code)
 print("Supplier detail:")
 print(supplier_detail_response.json())
+
+search_response = httpx.get(
+    f"{BASE_URL}/api/suppliers/",
+    params={"search": "jakarta"},
+    headers=headers
+)
+
+print("Search status:", search_response.status_code)
+print("Search results:")
+print(search_response.json())
