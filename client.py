@@ -59,12 +59,30 @@ new_supplier_data = {
     "alamat": "Depok"
 }
 
-new_supplier_response = httpx.post(
-    f"{BASE_URL}/api/suppliers/",
-    json=new_supplier_data,
+# new_supplier_response = httpx.post(
+   # f"{BASE_URL}/api/suppliers/",
+    #json=new_supplier_data,
+    #headers=headers
+#)
+
+#print("Create supplier status:", new_supplier_response.status_code)
+#print("Created supplier:")
+#print(new_supplier_response.json())
+
+update_supplier_id = 5
+
+updated_supplier_data = {
+    "kode_supplier": "SUP005",
+    "nama_supplier": "PT Contoh Indonesia",
+    "alamat": "Depok Barat"
+}
+
+update_response = httpx.put(
+    f"{BASE_URL}/api/suppliers/{update_supplier_id}",
+    json=updated_supplier_data,
     headers=headers
 )
 
-print("Create supplier status:", new_supplier_response.status_code)
-print("Created supplier:")
-print(new_supplier_response.json())
+print("Update supplier status:", update_response.status_code)
+print("Updated supplier:")
+print(update_response.json())
