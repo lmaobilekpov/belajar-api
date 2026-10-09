@@ -86,3 +86,14 @@ update_response = httpx.put(
 print("Update supplier status:", update_response.status_code)
 print("Updated supplier:")
 print(update_response.json())
+
+delete_supplier_id = 5
+
+delete_response = httpx.delete(
+    f"{BASE_URL}/api/suppliers/{delete_supplier_id}",
+    headers=headers
+)
+
+print("Delete supplier status:", delete_response.status_code)
+print("Delete result:")
+print(delete_response.json())
