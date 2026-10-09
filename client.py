@@ -2,98 +2,132 @@ import httpx
 
 BASE_URL = "http://127.0.0.1:8000"
 
-login_data = {
+LOGIN_DATA = {
     "grant_type": "password",
     "username": "jen",
     "password": "belajar123",
 }
 
-login_response = httpx.post(
-    f"{BASE_URL}/token",
-    data=login_data
-)
 
-print("Login status:", login_response.status_code)
+def login() -> str:
+    """Log in to the API and return the access token."""
+    response = httpx.post(
+        f"{BASE_URL}/token",
+        data=LOGIN_DATA,
+    )
 
-token_data = login_response.json()
-access_token = token_data["access_token"]
+    print("Login status:", response.status_code)
 
-headers = {
-    "Authorization": f"Bearer {access_token}"
-}
-
-suppliers_response = httpx.get(
-    f"{BASE_URL}/api/suppliers/",
-    headers=headers
-)
-
-print("Supplier API status:", suppliers_response.status_code)
-print("Supplier data:")
-print(suppliers_response.json())
+    token_data = response.json()
+    return token_data["access_token"]
 
 
-supplier_id = 4
+def get_headers(access_token: str) -> dict[str, str]:
+    """Build the Authorization header for protected requests."""
+    return {
+        "Authorization": f"Bearer {access_token}",
+    }
 
-supplier_detail_response = httpx.get(
-    f"{BASE_URL}/api/suppliers/{supplier_id}",
-    headers=headers
-)
 
-print("Supplier detail status:", supplier_detail_response.status_code)
-print("Supplier detail:")
-print(supplier_detail_response.json())
+def get_suppliers(headers: dict[str, str]) -> httpx.Response:
+    """Request all suppliers."""
+    return httpx.get(
+        f"{BASE_URL}/api/suppliers/",
+        headers=headers,
+    )
 
-search_response = httpx.get(
-    f"{BASE_URL}/api/suppliers/",
-    params={"search": "jakarta"},
-    headers=headers
-)
 
-print("Search status:", search_response.status_code)
-print("Search results:")
-print(search_response.json())
+def get_supplier_by_id(
+    supplier_id: int,
+    headers: dict[str, str],
+) -> httpx.Response:
+    """Request one supplier by its ID."""
+    return httpx.get(
+        f"{BASE_URL}/api/suppliers/{supplier_id}",
+        headers=headers,
+    )
 
-new_supplier_data = {
-    "kode_supplier": "SUP005",
-    "nama_supplier": "PT Contoh",
-    "alamat": "Depok"
-}
 
-# new_supplier_response = httpx.post(
-   # f"{BASE_URL}/api/suppliers/",
-    #json=new_supplier_data,
-    #headers=headers
-#)
+def search_suppliers(
+    search_term: str,
+    headers: dict[str, str],
+) -> httpx.Response:
+    """Search suppliers using a query parameter."""
+    return httpx.get(
+        f"{BASE_URL}/api/suppliers/",
+        params={"search": search_term},
+        headers=headers,
+    )
 
-#print("Create supplier status:", new_supplier_response.status_code)
-#print("Created supplier:")
-#print(new_supplier_response.json())
 
-update_supplier_id = 5
+def create_supplier(
+    supplier_data: dict[str, str],
+    headers: dict[str, str],
+) -> httpx.Response:
+    """Create a supplier by sending JSON to the API."""
+    return httpx.post(
+        f"{BASE_URL}/api/suppliers/",
+        json=supplier_data,
+        headers=headers,
+    )
 
-updated_supplier_data = {
-    "kode_supplier": "SUP005",
-    "nama_supplier": "PT Contoh Indonesia",
-    "alamat": "Depok Barat"
-}
 
-update_response = httpx.put(
-    f"{BASE_URL}/api/suppliers/{update_supplier_id}",
-    json=updated_supplier_data,
-    headers=headers
-)
+def update_supplier(
+    supplier_id: int,
+    supplier_data: dict[str, str],
+    headers: dict[str, str],
+) -> httpx.Response:
+    """Update an existing supplier by ID."""
+    return httpx.put(
+        f"{BASE_URL}/api/suppliers/{supplier_id}",
+        json=supplier_data,
+        headers=headers,
+    )
 
-print("Update supplier status:", update_response.status_code)
-print("Updated supplier:")
-print(update_response.json())
 
-delete_supplier_id = 5
+def delete_supplier(
+    supplier_id: int,
+    headers: dict[str, str],
+) -> httpx.Response:
+    """Delete a supplier by ID."""
+    return httpx.delete(
+        f"{BASE_URL}/api/suppliers/{supplier_id}",
+        headers=headers,
+    )
 
-delete_response = httpx.delete(
-    f"{BASE_URL}/api/suppliers/{delete_supplier_id}",
-    headers=headers
-)
 
-print("Delete supplier status:", delete_response.status_code)
-print("Delete result:")
-print(delete_response.json())
+def show_response(
+    status_label: str,
+    data_label: str,
+    response: httpx.Response,
+) -> None:
+    """Print the status code and JSON response body."""
+    print(f"{status_label} status:", response.status_code)
+    print(f"{data_label}:")
+    print(response.json())
+
+
+def main() -> None:
+    access_token = login()
+    headers = get_headers(access_token)
+
+    # The default run only reads data, so it is safe to rerun.
+    show_response(
+        "Supplier API",
+        "Supplier data",
+        get_suppliers(headers),
+    )
+    show_response(
+        "Supplier detail",
+        "Supplier detail",
+        get_supplier_by_id(4, headers),
+    )
+    show_response(
+        "Search",
+        "Search results",
+        search_suppliers("jakarta", headers),
+    )
+
+
+if __name__ == "__main__":
+    main()
