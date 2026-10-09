@@ -30,3 +30,15 @@ suppliers_response = httpx.get(
 print("Supplier API status:", suppliers_response.status_code)
 print("Supplier data:")
 print(suppliers_response.json())
+
+
+supplier_id = 4
+
+supplier_detail_response = httpx.get(
+    f"{BASE_URL}/api/suppliers/{supplier_id}",
+    headers=headers
+)
+
+print("Supplier detail status:", supplier_detail_response.status_code)
+print("Supplier detail:")
+print(supplier_detail_response.json())
