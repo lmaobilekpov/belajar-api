@@ -97,6 +97,21 @@ def delete_supplier(
     )
 
 
+def test_timeout() -> None:
+    """Request the deliberately slow endpoint with a short timeout."""
+    print("\nTesting timeout (client limit: 2 seconds)...")
+
+    try:
+        response = httpx.get(
+            f"{BASE_URL}/test-timeout",
+            timeout=2,
+        )
+        print("Timeout test status:", response.status_code)
+        print("Timeout test response:", response.json())
+    except httpx.TimeoutException:
+        print("Timeout test: server took too long to respond.")
+
+
 def show_response(
     status_label: str,
     data_label: str,
@@ -140,6 +155,9 @@ def main() -> None:
             "Search results",
             search_suppliers("jakarta", headers),
         )
+
+        # This test should time out because the endpoint waits for 6 seconds.
+        test_timeout()
     except httpx.ConnectError:
         print(
             f"Connection error: Could not connect to the API at {BASE_URL}. "
