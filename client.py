@@ -9,10 +9,10 @@ LOGIN_DATA = {
 }
 
 
-def login() -> str:
+def login(client: httpx.Client) -> str:
     """Log in to the API and return the access token."""
-    response = httpx.post(
-        f"{BASE_URL}/token",
+    response = client.post(
+        "/token",
         data=LOGIN_DATA,
     )
 
@@ -30,32 +30,37 @@ def get_headers(access_token: str) -> dict[str, str]:
     }
 
 
-def get_suppliers(headers: dict[str, str]) -> httpx.Response:
+def get_suppliers(
+    client: httpx.Client,
+    headers: dict[str, str],
+) -> httpx.Response:
     """Request all suppliers."""
-    return httpx.get(
-        f"{BASE_URL}/api/suppliers/",
+    return client.get(
+        "/api/suppliers/",
         headers=headers,
     )
 
 
 def get_supplier_by_id(
     supplier_id: int,
+    client: httpx.Client,
     headers: dict[str, str],
 ) -> httpx.Response:
     """Request one supplier by its ID."""
-    return httpx.get(
-        f"{BASE_URL}/api/suppliers/{supplier_id}",
+    return client.get(
+        f"/api/suppliers/{supplier_id}",
         headers=headers,
     )
 
 
 def search_suppliers(
     search_term: str,
+    client: httpx.Client,
     headers: dict[str, str],
 ) -> httpx.Response:
     """Search suppliers using a query parameter."""
-    return httpx.get(
-        f"{BASE_URL}/api/suppliers/",
+    return client.get(
+        "/api/suppliers/",
         params={"search": search_term},
         headers=headers,
     )
@@ -63,11 +68,12 @@ def search_suppliers(
 
 def create_supplier(
     supplier_data: dict[str, str],
+    client: httpx.Client,
     headers: dict[str, str],
 ) -> httpx.Response:
     """Create a supplier by sending JSON to the API."""
-    return httpx.post(
-        f"{BASE_URL}/api/suppliers/",
+    return client.post(
+        "/api/suppliers/",
         json=supplier_data,
         headers=headers,
     )
@@ -76,11 +82,12 @@ def create_supplier(
 def update_supplier(
     supplier_id: int,
     supplier_data: dict[str, str],
+    client: httpx.Client,
     headers: dict[str, str],
 ) -> httpx.Response:
     """Update an existing supplier by ID."""
-    return httpx.put(
-        f"{BASE_URL}/api/suppliers/{supplier_id}",
+    return client.put(
+        f"/api/suppliers/{supplier_id}",
         json=supplier_data,
         headers=headers,
     )
@@ -88,22 +95,23 @@ def update_supplier(
 
 def delete_supplier(
     supplier_id: int,
+    client: httpx.Client,
     headers: dict[str, str],
 ) -> httpx.Response:
     """Delete a supplier by ID."""
-    return httpx.delete(
-        f"{BASE_URL}/api/suppliers/{supplier_id}",
+    return client.delete(
+        f"/api/suppliers/{supplier_id}",
         headers=headers,
     )
 
 
-def test_timeout() -> None:
+def test_timeout(client: httpx.Client) -> None:
     """Request the deliberately slow endpoint with a short timeout."""
     print("\nTesting timeout (client limit: 2 seconds)...")
 
     try:
-        response = httpx.get(
-            f"{BASE_URL}/test-timeout",
+        response = client.get(
+            "/test-timeout",
             timeout=2,
         )
         print("Timeout test status:", response.status_code)
@@ -136,28 +144,30 @@ def show_response(
 
 def main() -> None:
     try:
-        access_token = login()
-        headers = get_headers(access_token)
+        # Reuse one HTTPX client for all requests in this run.
+        with httpx.Client(base_url=BASE_URL) as client:
+            access_token = login(client)
+            headers = get_headers(access_token)
 
-        # The default run only reads data, so it is safe to rerun.
-        show_response(
-            "Supplier API",
-            "Supplier data",
-            get_suppliers(headers),
-        )
-        show_response(
-            "Supplier detail",
-            "Supplier detail",
-            get_supplier_by_id(4, headers),
-        )
-        show_response(
-            "Search",
-            "Search results",
-            search_suppliers("jakarta", headers),
-        )
+            # The default run only reads data, so it is safe to rerun.
+            show_response(
+                "Supplier API",
+                "Supplier data",
+                get_suppliers(client, headers),
+            )
+            show_response(
+                "Supplier detail",
+                "Supplier detail",
+                get_supplier_by_id(4, client, headers),
+            )
+            show_response(
+                "Search",
+                "Search results",
+                search_suppliers("jakarta", client, headers),
+            )
 
-        # This test should time out because the endpoint waits for 6 seconds.
-        test_timeout()
+            # This test should time out because the endpoint waits for 6 seconds.
+            test_timeout(client)
     except httpx.ConnectError:
         print(
             f"Connection error: Could not connect to the API at {BASE_URL}. "
