@@ -120,25 +120,31 @@ def show_response(
 
 
 def main() -> None:
-    access_token = login()
-    headers = get_headers(access_token)
+    try:
+        access_token = login()
+        headers = get_headers(access_token)
 
-    # The default run only reads data, so it is safe to rerun.
-    show_response(
-        "Supplier API",
-        "Supplier data",
-        get_suppliers(headers),
-    )
-    show_response(
-        "Supplier detail",
-        "Supplier detail",
-        get_supplier_by_id(4, headers),
-    )
-    show_response(
-        "Search",
-        "Search results",
-        search_suppliers("jakarta", headers),
-    )
+        # The default run only reads data, so it is safe to rerun.
+        show_response(
+            "Supplier API",
+            "Supplier data",
+            get_suppliers(headers),
+        )
+        show_response(
+            "Supplier detail",
+            "Supplier detail",
+            get_supplier_by_id(4, headers),
+        )
+        show_response(
+            "Search",
+            "Search results",
+            search_suppliers("jakarta", headers),
+        )
+    except httpx.ConnectError:
+        print(
+            f"Connection error: Could not connect to the API at {BASE_URL}. "
+            "Make sure the FastAPI server is running."
+        )
 
 
 if __name__ == "__main__":
