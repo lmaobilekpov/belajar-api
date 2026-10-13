@@ -18,6 +18,7 @@ def login() -> str:
 
     print("Login status:", response.status_code)
 
+    response.raise_for_status()
     token_data = response.json()
     return token_data["access_token"]
 
@@ -101,8 +102,19 @@ def show_response(
     data_label: str,
     response: httpx.Response,
 ) -> None:
-    """Print the status code and JSON response body."""
+    """Print an HTTP response, handling HTTP error statuses."""
     print(f"{status_label} status:", response.status_code)
+
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError:
+        print(f"{data_label} (error response):")
+        try:
+            print(response.json())
+        except ValueError:
+            print(response.text)
+        return
+
     print(f"{data_label}:")
     print(response.json())
 
