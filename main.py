@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -119,6 +120,12 @@ def startup_event():
         db.add_all(seed_data)
         db.commit()
     db.close()
+
+@app.get("/test-timeout")
+async def test_timeout():
+    """A test endpoint that intentionally waits before returning a response."""
+    await asyncio.sleep(6)
+    return {"message": "Server selesai menunggu selama 6 detik."}
 
 @app.get("/api/suppliers/", response_model=list[SupplierResponse], dependencies=[Depends(get_current_user)])
 def get_all_suppliers(search: str | None = None, db: Session = Depends(get_db)):
