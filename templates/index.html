@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Master Data API Playground</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#182230;background:#f5f7fa}
+    body{margin:0}.wrap{max-width:1040px;margin:0 auto;padding:36px 20px}
+    .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#526174;font-weight:700}
+    h1{margin:.35rem 0;font-size:clamp(28px,4vw,40px)}p{color:#526174;line-height:1.6}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:28px}
+    .card{background:#fff;border:1px solid #dfe5ec;border-radius:16px;padding:24px}
+    .num{font-size:36px;font-weight:750;margin:12px 0}
+    a.btn{display:inline-block;text-decoration:none;background:#155eef;color:white;padding:10px 14px;border-radius:9px;font-weight:650}
+    .muted{font-size:14px;color:#526174}.note{background:#fff8e6;border:1px solid #f2d38b;border-radius:12px;padding:16px;margin-top:24px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">Local training environment</div>
+    <h1>Master Data API Playground</h1>
+    <p>Kelola data karyawan dan supplier fiktif, lalu gunakan API-nya untuk latihan sinkronisasi ke aplikasi konsumen.</p>
+    <section class="grid">
+      <article class="card">
+        <div class="eyebrow">Data karyawan</div>
+        <div class="num">{{ employee_count }}</div>
+        <p class="muted">Data dummy termasuk status aktif/nonaktif.</p>
+        <a class="btn" href="/web/employees/">Kelola karyawan</a>
+      </article>
+      <article class="card">
+        <div class="eyebrow">Data supplier</div>
+        <div class="num">{{ supplier_count }}</div>
+        <p class="muted">Data dummy untuk menguji pilihan supplier dan sinkronisasi.</p>
+        <a class="btn" href="/web/suppliers/">Kelola supplier</a>
+      </article>
+    </section>
+    <div class="note">
+      <strong>Catatan latihan</strong>
+      <p>Gunakan hanya data fiktif. Halaman ini menggunakan akun latihan Basic Auth yang sama dengan proyek demo: username <code>jen</code>, password <code>belajar123</code>. Jangan memakai konfigurasi demo ini untuk deployment publik.</p>
+    </div>
+    <p class="muted"><a href="/docs">Buka dokumentasi API (Swagger)</a></p>
+  </main>
+</body>
+</html>
