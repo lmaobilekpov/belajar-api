@@ -31,7 +31,7 @@
         <tbody>
         {% for row in rows %}
           <tr>
-            {% for value in row.values %}<td>{{ value }}</td>{% endfor %}
+            {% for value in row['values'] %}<td>{{ value }}</td>{% endfor %}
             <td><div class="actions">
               <a class="btn plain" href="{{ row.edit_url }}">Edit</a>
               <form method="post" action="{{ row.delete_url }}" onsubmit="return confirm('Hapus data latihan ini?');">
